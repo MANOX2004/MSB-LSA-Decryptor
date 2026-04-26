@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSA Decryptor — Recover Xiaomi Secret Album Files</title>
+<meta name="description" content="Decrypt .lsa and .lsav files from Xiaomi MIUI Secret Album. Free, private, runs entirely in your browser — your files never leave your device.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:         #020510;
+    --bg2:        #030818;
+    --surface:    #060d1f;
+    --surface2:   #0a1428;
+    --surface3:   #0d1a32;
+    --border:     #0e2040;
+    --border2:    #163060;
+    --border3:    #1e4080;
+    --accent:     #00c8ff;
+    --accent2:    #0090cc;
+    --accent3:    #005580;
+    --accent-dim: #00c8ff14;
+    --accent-glow:#00c8ff33;
+    --neon-bright:#40dfff;
+    --neon-core:  #80eeff;
+    --purple:     #7b2fff;
+    --purple-dim: #7b2fff20;
+    --text:       #cce8f5;
+    --text2:      #5a8aaa;
+    --text3:      #2a4a60;
+    --success:    #00ff9d;
+    --error:      #ff2d6b;
+    --warning:    #ffaa00;
+    --mono:       'Share Tech Mono', monospace;
+    --display:    'Orbitron', monospace;
+    --sans:       'Rajdhani', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+    font-size: 16px;
+  }
+
+  /* ── Scanline overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 200, 255, 0.015) 2px,
+      rgba(0, 200, 255, 0.015) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+    animation: scanMove 8s linear infinite;
+  }
+
+  @keyframes scanMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100px; }
+  }
+
+  /* ── Grid bg ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ── Glow orbs ── */
+  .orb1 {
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 900px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(0,150,255,0.12) 0%, rgba(0,80,180,0.06) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb2 {
+    position: fixed;
+    bottom: -100px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(123,47,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb3 {
+    position: fixed;
+    bottom: 200px;
+    left: -100px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,200,255,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ══ NAV ══ */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border2);
+    position: relative;
+  }
+
+  nav::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    text-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(0,200,255,0.2);
+    position: relative;
+  }
+
+  .logo::before {
+    content: '>';
+    color: var(--purple);
+    margin-right: 8px;
+    text-shadow: 0 0 15px var(--purple);
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .nav-links a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: color 0.2s, text-shadow 0.2s;
+    font-family: var(--sans);
+  }
+  .nav-links a:hover {
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .btn-ko {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border3);
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-family: var(--sans);
+    text-transform: uppercase;
+    box-shadow: 0 0 12px var(--accent-dim), inset 0 0 12px rgba(0,200,255,0.03);
+  }
+  .btn-ko:hover {
+    background: var(--accent-glow);
+    color: var(--neon-bright) !important;
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow), 0 0 40px rgba(0,200,255,0.1);
+  }
+
+  /* ══ HERO ══ */
+  .hero {
+    padding: 72px 0 48px;
+    text-align: center;
+    position: relative;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-dim);
+    border: 1px solid var(--border3);
+    border-radius: 3px;
+    padding: 5px 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    box-shadow: 0 0 20px var(--accent-dim), inset 0 0 20px rgba(0,200,255,0.02);
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent); }
+    50% { opacity: 0.4; box-shadow: 0 0 4px var(--accent); }
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  h1 .line1 {
+    color: var(--text);
+    display: block;
+    letter-spacing: 0.05em;
+    font-size: 0.65em;
+    font-weight: 400;
+    color: var(--text2);
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    text-transform: none;
+    letter-spacing: 0.1em;
+  }
+
+  h1 .accent-text {
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(0,200,255,0.2), 0 0 100px rgba(0,150,255,0.1);
+    display: block;
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { text-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(0,200,255,0.2); }
+    50% { text-shadow: 0 0 40px rgba(0,200,255,0.6), 0 0 80px rgba(0,200,255,0.3), 0 0 120px rgba(0,150,255,0.15); }
+  }
+
+  .hero-sub {
+    font-size: 16px;
+    color: var(--text2);
+    max-width: 520px;
+    margin: 0 auto 12px;
+    line-height: 1.7;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+
+  .privacy-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 48px;
+    letter-spacing: 0.08em;
+  }
+
+  .privacy-note::before {
+    content: '🔒';
+    font-size: 11px;
+  }
+
+  /* ══ DROP ZONE ══ */
+  .drop-zone {
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 60px rgba(0,100,200,0.04), 0 0 0 1px rgba(0,200,255,0.05);
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,200,255,0.06) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* Corner decorations */
+  .drop-zone::after {
+    content: '';
+    position: absolute;
+    top: 8px; left: 8px;
+    width: 20px; height: 20px;
+    border-top: 1.5px solid var(--accent);
+    border-left: 1.5px solid var(--accent);
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+
+  .corner-tr, .corner-bl, .corner-br {
+    position: absolute;
+    width: 20px; height: 20px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .corner-tr { top: 8px; right: 8px; border-top: 1.5px solid var(--accent); border-right: 1.5px solid var(--accent); }
+  .corner-bl { bottom: 8px; left: 8px; border-bottom: 1.5px solid var(--accent); border-left: 1.5px solid var(--accent); }
+  .corner-br { bottom: 8px; right: 8px; border-bottom: 1.5px solid var(--accent); border-right: 1.5px solid var(--accent); }
+
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--surface2);
+    box-shadow: inset 0 0 60px rgba(0,200,255,0.06), 0 0 40px rgba(0,200,255,0.08), 0 0 0 1px rgba(0,200,255,0.2);
+  }
+
+  .drop-zone:hover::after,
+  .drop-zone.drag-over::after,
+  .drop-zone:hover .corner-tr,
+  .drop-zone:hover .corner-bl,
+  .drop-zone:hover .corner-br,
+  .drop-zone.drag-over .corner-tr,
+  .drop-zone.drag-over .corner-bl,
+  .drop-zone.drag-over .corner-br {
+    opacity: 1;
+  }
+
+  .drop-zone.drag-over::before {
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,200,255,0.12) 0%, transparent 65%);
+  }
+
+  .drop-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 20px;
+    border: 1px solid var(--border3);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: var(--surface2);
+    transition: all 0.25s;
+    box-shadow: 0 0 20px rgba(0,200,255,0.06), inset 0 0 20px rgba(0,200,255,0.04);
+    position: relative;
+  }
+
+  .drop-zone:hover .drop-icon,
+  .drop-zone.drag-over .drop-icon {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: 0 0 30px rgba(0,200,255,0.15), 0 8px 20px rgba(0,0,0,0.4);
+  }
+
+  .drop-title {
+    font-family: var(--display);
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--text2);
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+
+  .btn-browse {
+    display: inline-block;
+    background: transparent;
+    border: 1px solid var(--border3);
+    color: var(--accent);
+    border-radius: 4px;
+    padding: 9px 24px;
+    font-size: 12px;
+    font-family: var(--mono);
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .btn-browse:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    box-shadow: 0 0 20px var(--accent-dim);
+    color: var(--neon-bright);
+  }
+
+  #file-input { display: none; }
+
+  /* ══ FILE LIST ══ */
+  #file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+
+  .file-item {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    animation: slideIn 0.2s ease;
+    transition: border-color 0.2s;
+  }
+
+  .file-item:hover { border-color: var(--border3); }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .file-type {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    padding: 3px 8px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .file-type.lsa  { background: rgba(0,200,255,0.08); color: var(--accent); border: 1px solid rgba(0,200,255,0.2); box-shadow: 0 0 10px rgba(0,200,255,0.08); }
+  .file-type.lsav { background: rgba(255,170,0,0.08); color: var(--warning); border: 1px solid rgba(255,170,0,0.2); }
+
+  .file-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 12px; letter-spacing: 0.02em; }
+  .file-size { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; letter-spacing: 0.05em; }
+
+  .file-status {
+    font-size: 10px;
+    font-weight: 400;
+    flex-shrink: 0;
+    font-family: var(--mono);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .file-status.pending  { color: var(--text3); }
+  .file-status.working  { color: var(--warning); text-shadow: 0 0 8px rgba(255,170,0,0.4); animation: blink 1s ease-in-out infinite; }
+  .file-status.done     { color: var(--success); text-shadow: 0 0 8px rgba(0,255,157,0.4); }
+  .file-status.error    { color: var(--error); text-shadow: 0 0 8px rgba(255,45,107,0.4); }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .remove-btn {
+    background: none;
+    border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    flex-shrink: 0;
+    transition: color 0.15s, text-shadow 0.15s;
+    font-family: var(--mono);
+  }
+  .remove-btn:hover { color: var(--error); text-shadow: 0 0 8px rgba(255,45,107,0.5); }
+
+  /* ══ ACTIONS ══ */
+  .actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: center;
+  }
+
+  .btn-decrypt {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(0,200,255,0.15) 0%, rgba(0,120,220,0.1) 100%);
+    color: var(--accent);
+    border: 1px solid var(--accent2);
+    border-radius: 6px;
+    padding: 14px 28px;
+    font-size: 14px;
+    font-family: var(--display);
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(0,200,255,0.08), inset 0 0 20px rgba(0,200,255,0.03);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-decrypt::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0,200,255,0.1), transparent);
+    transition: left 0.4s ease;
+  }
+
+  .btn-decrypt:hover:not(:disabled)::before { left: 100%; }
+
+  .btn-decrypt:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(0,200,255,0.2) 0%, rgba(0,150,255,0.15) 100%);
+    border-color: var(--accent);
+    box-shadow: 0 0 30px rgba(0,200,255,0.2), 0 0 60px rgba(0,200,255,0.08);
+    color: var(--neon-bright);
+    text-shadow: 0 0 15px var(--accent-glow);
+  }
+  .btn-decrypt:active:not(:disabled) { transform: scale(0.99); }
+  .btn-decrypt:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-clear {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    border-radius: 6px;
+    padding: 14px 20px;
+    font-size: 13px;
+    font-family: var(--mono);
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .btn-clear:hover { border-color: var(--error); color: var(--error); box-shadow: 0 0 15px rgba(255,45,107,0.1); }
+
+  /* ══ PROGRESS ══ */
+  .progress-wrap {
+    margin-top: 20px;
+    display: none;
+  }
+  .progress-wrap.visible { display: block; }
+
+  .progress-bar-track {
+    height: 2px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    position: relative;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent2), var(--accent), var(--neon-bright));
+    border-radius: 99px;
+    transition: width 0.3s ease;
+    width: 0%;
+    box-shadow: 0 0 10px var(--accent), 0 0 20px rgba(0,200,255,0.5);
+    position: relative;
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+  }
+
+  /* ══ SECTIONS ══ */
+  .section {
+    padding: 80px 0;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+
+  .section::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0;
+    width: 120px; height: 1px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  .section h2 {
+    font-family: var(--display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .step::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .step:hover {
+    border-color: var(--border3);
+    box-shadow: 0 0 30px rgba(0,200,255,0.05);
+  }
+
+  .step:hover::before { opacity: 1; }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--accent);
+    margin-bottom: 14px;
+    letter-spacing: 0.2em;
+    text-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  .step h3 {
+    font-family: var(--display);
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.7;
+    font-family: var(--mono);
+    font-weight: 400;
+  }
+
+  /* ══ TRUST STRIP ══ */
+  .trust-strip {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    margin-top: 40px;
+    overflow: hidden;
+    flex-wrap: wrap;
+  }
+
+  .trust-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text2);
+    font-weight: 500;
+    flex: 1;
+    padding: 18px 20px;
+    border-right: 1px solid var(--border);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+    transition: background 0.2s, color 0.2s;
+    min-width: 180px;
+  }
+
+  .trust-item:last-child { border-right: none; }
+  .trust-item:hover { background: var(--surface2); color: var(--text); }
+
+  .trust-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--accent), 0 0 12px rgba(0,200,255,0.4);
+    animation: dotPulse 3s ease-in-out infinite;
+  }
+
+  .trust-item:nth-child(2) .trust-dot { animation-delay: 0.5s; }
+  .trust-item:nth-child(3) .trust-dot { animation-delay: 1s; }
+  .trust-item:nth-child(4) .trust-dot { animation-delay: 1.5s; }
+
+  @keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 6px var(--accent), 0 0 12px rgba(0,200,255,0.4); }
+    50% { box-shadow: 0 0 3px var(--accent), 0 0 6px rgba(0,200,255,0.2); }
+  }
+
+  /* ══ FIND FILES ══ */
+  .path-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: inset 0 0 20px rgba(0,100,200,0.04);
+  }
+
+  .path-box::before { content: '📁'; font-size: 16px; }
+
+  .path-arrow {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 12px;
+  }
+
+  .path-seg {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 3px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    transition: border-color 0.2s;
+  }
+
+  .path-seg:hover { border-color: var(--border3); }
+  .path-sep { color: var(--text3); font-size: 14px; }
+
+  /* ══ SUPPORT ══ */
+  .support-box {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 48px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .support-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .support-box::after {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 400px; height: 200px;
+    background: radial-gradient(ellipse, rgba(0,200,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .support-box h2 {
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text);
+    position: relative;
+    z-index: 1;
+  }
+
+  .support-box p {
+    color: var(--text2);
+    font-size: 14px;
+    margin-bottom: 32px;
+    line-height: 1.7;
+    font-family: var(--mono);
+    position: relative;
+    z-index: 1;
+  }
+
+  .support-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 1;
+  }
+
+  .btn-support {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: var(--mono);
+    font-weight: 400;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .btn-support:hover { transform: translateY(-2px); }
+
+  .btn-kofi    { background: rgba(255,94,91,0.15); color: #FF5E5B; border-color: rgba(255,94,91,0.3); }
+  .btn-kofi:hover { background: rgba(255,94,91,0.25); box-shadow: 0 0 20px rgba(255,94,91,0.2); }
+
+  .btn-Download { background: var(--accent-dim); color: var(--accent); border-color: var(--border3); }
+  .btn-Download:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--accent-dim); color: var(--neon-bright); }
+
+  .btn-github { background: var(--surface2); color: var(--text2); border-color: var(--border2); }
+  .btn-github:hover { border-color: var(--border3); color: var(--text); }
+
+  /* ══ FOOTER ══ */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 28px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text3);
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    position: relative;
+  }
+
+  footer::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0;
+    width: 80px; height: 1px;
+    background: linear-gradient(90deg, var(--accent2), transparent);
+  }
+
+  footer a { color: var(--text3); text-decoration: none; transition: color 0.2s; }
+  footer a:hover { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+
+  /* ══ TOAST ══ */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 12px 20px;
+    font-size: 12px;
+    font-weight: 400;
+    z-index: 999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success {
+    border-color: var(--success);
+    color: var(--success);
+    box-shadow: 0 0 20px rgba(0,255,157,0.1);
+  }
+  .toast.error {
+    border-color: var(--error);
+    color: var(--error);
+    box-shadow: 0 0 20px rgba(255,45,107,0.1);
+  }
+
+  /* ══ SECTION P ══ */
+  .section > p, .section-text {
+    color: var(--text2);
+    font-size: 14px;
+    line-height: 1.8;
+    font-family: var(--mono);
+  }
+
+  /* ══ FLICKER on load ══ */
+  @keyframes flicker {
+    0% { opacity: 0; }
+    10% { opacity: 0.8; }
+    12% { opacity: 0.2; }
+    14% { opacity: 0.9; }
+    16% { opacity: 0.4; }
+    18% { opacity: 1; }
+    100% { opacity: 1; }
+  }
+
+  .logo { animation: flicker 0.8s ease forwards; }
+
+  /* Status bar at top */
+  .status-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .status-bar .wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @media (max-width: 600px) {
+    .nav-links { gap: 14px; }
+    .trust-strip { flex-direction: column; }
+    .trust-item { border-right: none; border-bottom: 1px solid var(--border); }
+    .trust-item:last-child { border-bottom: none; }
+    .support-box { padding: 28px 20px; }
+    footer { flex-direction: column; text-align: center; }
+    .status-bar .status-time { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="orb1"></div>
+<div class="orb2"></div>
+<div class="orb3"></div>
+
+<!-- ══ STATUS BAR ══ -->
+<div class="status-bar">
+  <div class="wrap">
+    <div class="status-item">
+      <div class="status-dot"></div>
+      <span>System online — all processing local</span>
+    </div>
+    <div class="status-item status-time">
+      <span>AES-128-CTR · Web Crypto API · Zero uploads</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NAV ══ -->
+<div class="wrap">
+  <nav>
+    <div class="logo">Powered By Manoj Senevirathna</div>
+    <div class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#find">Find files</a>
+      <a href="https://github.com/Jay-S9/miui-lsa-decryptor" target="_blank">GitHub</a>
+    </div>
+  </nav>
+</div>
+
+<!-- ══ HERO ══ -->
+<div class="wrap">
+  <div class="hero">
+    <h1>
+      <span class="line1">Xiaomi MIUI · Secret Album Recovery</span>
+      <span class="accent-text">MSB LSA Decryptor</span>
+    </h1>
+    <p class="hero-sub">
+      Decrypt .lsa photos and .lsav videos from Xiaomi MIUI Gallery.
+      Works on every Xiaomi, Redmi &amp; POCO device.
+    </p>
+    <div class="privacy-note">Your files never leave your device — processed entirely in-browser</div>
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="drop-zone">
+      <div class="corner-tr"></div>
+      <div class="corner-bl"></div>
+      <div class="corner-br"></div>
+      <div class="drop-icon">⬇</div>
+      <div class="drop-title">Drop .lsa or .lsav files here</div>
+      <div class="drop-sub">// photos (.lsa) and videos (.lsav) both supported</div>
+      <button class="btn-browse" onclick="document.getElementById('file-input').click()">[ Browse files ]</button>
+      <input type="file" id="file-input" multiple accept=".lsa,.lsav">
+    </div>
+
+    <div id="file-list"></div>
+
+    <div class="actions" id="actions" style="display:none">
+      <button class="btn-decrypt" id="decrypt-btn" onclick="startDecryption()">
+        ▶ Decrypt all files
+      </button>
+      <button class="btn-clear" onclick="clearAll()">[ Clear ]</button>
+    </div>
+
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-label" id="progress-label">Processing…</div>
+    </div>
+
+    <!-- Trust strip -->
+    <div class="trust-strip">
+      <div class="trust-item"><div class="trust-dot"></div>100% offline — no uploads</div>
+      <div class="trust-item"><div class="trust-dot"></div>Lossless — original quality</div>
+      <div class="trust-item"><div class="trust-dot"></div>MIUI 12 · 13 · 14 · HyperOS</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HOW IT WORKS ══ -->
+<div class="wrap">
+  <div class="section" id="how">
+    <div class="section-label">// How it works</div>
+    <h2>Simple. Private. Fast.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01 —</div>
+        <h3>Connect your phone</h3>
+        <p>USB cable → File Transfer mode → copy the secretAlbum folder to your PC</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02 —</div>
+        <h3>Drop the files</h3>
+        <p>Drag .lsa photos or .lsav videos directly into the zone above</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03 —</div>
+        <h3>Click decrypt</h3>
+        <p>AES-128-CTR decryption runs locally in your browser in seconds</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04 —</div>
+        <h3>Download &amp; done</h3>
+        <p>Your JPEG, PNG, or MP4 files download automatically. Original quality.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FIND YOUR FILES ══ -->
+<div class="wrap">
+  <div class="section" id="find">
+    <div class="section-label">// Finding your files</div>
+    <h2>Where are the .lsa files?</h2>
+    <p class="section-text" style="margin-bottom:20px;">
+      Connect your Xiaomi phone via USB, enable <strong style="color:var(--text)">File Transfer</strong> mode,
+      then navigate to this path in File Explorer:
+    </p>
+    <div class="path-box">
+      <div class="path-arrow">
+        <span class="path-seg">Internal Storage</span>
+        <span class="path-sep">›</span>
+        <span class="path-seg">MIUI</span>
+        <span class="path-sep">›</span>
+        <span class="path-seg">Gallery</span>
+        <span class="path-sep">›</span>
+        <span class="path-seg">cloud</span>
+        <span class="path-sep">›</span>
+        <span class="path-seg" style="color:var(--accent);border-color:var(--border3);box-shadow:0 0 10px var(--accent-dim);">secretAlbum</span>
+      </div>
+    </div>
+    <p class="section-text">
+      Files will have hashed names like <span style="color:var(--accent);text-shadow:0 0 10px var(--accent-glow)">3e751332435bfad27569ca4efed1b602.lsav</span> — that's normal.
+      Copy the entire secretAlbum folder to your PC before uploading here.
+    </p>
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div class="wrap">
+  <footer>
+    <div>MSB LSA Decryptor</div>
+    <div style="display:flex;gap:20px">
+      <a href="https://github.com/Jay-S9/miui-lsa-decryptor" target="_blank">GitHub</a>
+      <a href="#how">How it works</a>
+      <a href="mailto:solanki9jay@email.com">Contact</a>
+    </div>
+  </footer>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// AES-128-CTR Decryption — Web Crypto API
+// Same key/IV as the Python desktop tool
+// ══════════════════════════════════════════════════════
+
+const AES_KEY_HEX = '3082046c30820354a003020102020900';
+const AES_IV_BYTES = [17,19,33,35,49,51,65,67,81,83,97,102,103,104,113,114];
+
+function ivToCounter(ivBytes) {
+  return new Uint8Array(ivBytes.map(b => b & 0xFF));
+}
+
+async function getKey() {
+  const keyBytes = new Uint8Array(AES_KEY_HEX.match(/.{2}/g).map(h => parseInt(h,16)));
+  return crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CTR' }, false, ['decrypt']);
+}
+
+async function decryptBuffer(buffer, isVideo) {
+  const key = await getKey();
+  const iv  = ivToCounter(AES_IV_BYTES);
+  const HEADER = 1024;
+
+  if (isVideo && buffer.byteLength > HEADER) {
+    const header    = buffer.slice(0, HEADER);
+    const body      = buffer.slice(HEADER);
+    const decHeader = await crypto.subtle.decrypt(
+      { name: 'AES-CTR', counter: iv, length: 64 }, key, header
+    );
+    const result = new Uint8Array(decHeader.byteLength + body.byteLength);
+    result.set(new Uint8Array(decHeader), 0);
+    result.set(new Uint8Array(body), decHeader.byteLength);
+    return result.buffer;
+  } else {
+    return crypto.subtle.decrypt(
+      { name: 'AES-CTR', counter: iv, length: 64 }, key, buffer
+    );
+  }
+}
+
+function detectExtension(bytes) {
+  const b = new Uint8Array(bytes);
+  if (b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF)           return '.jpg';
+  if (b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47) return '.png';
+  if (b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70) return '.mp4';
+  if (b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3) return '.mkv';
+  if (b[0]===0x47 && b[1]===0x49 && b[2]===0x46)           return '.gif';
+  return '.bin';
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a   = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+}
+
+let fileQueue = [];
+
+function addFiles(files) {
+  for (const f of files) {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['lsa','lsav'].includes(ext)) continue;
+    if (fileQueue.find(q => q.file.name === f.name && q.file.size === f.size)) continue;
+    fileQueue.push({ file: f, ext, status: 'pending', id: Math.random().toString(36).slice(2) });
+  }
+  renderList();
+}
+
+function renderList() {
+  const list = document.getElementById('file-list');
+  const actions = document.getElementById('actions');
+  list.innerHTML = '';
+
+  fileQueue.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'file-item';
+    div.id = 'item-' + item.id;
+
+    const statusMap = {
+      pending: ['pending', 'READY'],
+      working: ['working', 'DECRYPTING…'],
+      done:    ['done',    'DONE ✓'],
+      error:   ['error',   'ERROR'],
+    };
+    const [cls, label] = statusMap[item.status];
+
+    div.innerHTML = `
+      <span class="file-type ${item.ext}">.${item.ext}</span>
+      <span class="file-name">${item.file.name}</span>
+      <span class="file-size">${formatSize(item.file.size)}</span>
+      <span class="file-status ${cls}">${label}</span>
+      ${item.status === 'pending' ? `<button class="remove-btn" onclick="removeFile('${item.id}')">×</button>` : ''}
+    `;
+    list.appendChild(div);
+  });
+
+  actions.style.display = fileQueue.length ? 'flex' : 'none';
+  document.getElementById('decrypt-btn').disabled = !fileQueue.some(f => f.status === 'pending');
+}
+
+function removeFile(id) {
+  fileQueue = fileQueue.filter(f => f.id !== id);
+  renderList();
+}
+
+function clearAll() {
+  fileQueue = [];
+  renderList();
+  document.getElementById('progress-wrap').classList.remove('visible');
+}
+
+function setItemStatus(id, status) {
+  const item = fileQueue.find(f => f.id === id);
+  if (item) { item.status = status; renderList(); }
+}
+
+async function startDecryption() {
+  const pending = fileQueue.filter(f => f.status === 'pending');
+  if (!pending.length) return;
+
+  document.getElementById('decrypt-btn').disabled = true;
+  document.getElementById('progress-wrap').classList.add('visible');
+
+  let done = 0;
+  for (const item of pending) {
+    setItemStatus(item.id, 'working');
+    updateProgress(done, pending.length, item.file.name);
+
+    try {
+      const buf       = await item.file.arrayBuffer();
+      const isVideo   = item.ext === 'lsav';
+      const decrypted = await decryptBuffer(buf, isVideo);
+      const ext       = detectExtension(decrypted);
+      const stem      = item.file.name.replace(/\.(lsa|lsav)$/i, '');
+      const mimeMap   = { '.jpg':'image/jpeg','.png':'image/png','.mp4':'video/mp4','.mkv':'video/x-matroska','.gif':'image/gif','.bin':'application/octet-stream' };
+      const blob      = new Blob([decrypted], { type: mimeMap[ext] || 'application/octet-stream' });
+      downloadBlob(blob, stem + '_decrypted' + ext);
+      setItemStatus(item.id, 'done');
+    } catch (e) {
+      setItemStatus(item.id, 'error');
+      console.error(item.file.name, e);
+    }
+    done++;
+  }
+
+  updateProgress(pending.length, pending.length, '');
+  document.getElementById('progress-label').textContent = `Done — ${done} file${done!==1?'s':''} decrypted`;
+  showToast(`${done} file${done!==1?'s':''} decrypted successfully`, 'success');
+}
+
+function updateProgress(current, total, filename) {
+  const pct = total ? Math.round((current / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent =
+    filename ? `> Processing: ${filename}` : `${pct}%`;
+}
+
+const zone = document.getElementById('drop-zone');
+
+zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', e => { zone.classList.remove('drag-over'); });
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files]);
+});
+
+document.getElementById('file-input').addEventListener('change', e => {
+  addFiles([...e.target.files]);
+  e.target.value = '';
+});
+
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
