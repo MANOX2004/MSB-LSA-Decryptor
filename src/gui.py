@@ -15,26 +15,31 @@ except ImportError:
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-ACCENT      = "#00E5B0"
-ACCENT_DARK = "#00B589"
-BG          = "#080B0F"
-SURFACE     = "#0E1318"
-SURFACE2    = "#141C24"
-BORDER      = "#1E2A35"
-TEXT        = "#E2EBF0"
-TEXT2       = "#7A96A8"
-SUCCESS     = "#22D47A"
-ERROR       = "#FF4D6A"
-WARNING     = "#FFB020"
+ACCENT      = "#00C8FF"
+ACCENT_DARK = "#0090CC"
+BG          = "#020510"
+SURFACE     = "#060D1F"
+SURFACE2    = "#0A1428"
+BORDER      = "#0E2040"
+BORDER2     = "#163060"
+BORDER3     = "#1E4080"
+TEXT        = "#CCE8F5"
+TEXT2       = "#5A8AAA"
+TEXT3       = "#2A4A60"
+SUCCESS     = "#00FF9D"
+ERROR       = "#FF2D6B"
+WARNING     = "#FFAA00"
+PURPLE      = "#7B2FFF"
 
 
 # ── File row ───────────────────────────────────────────────────────────────
 class FileRow(ctk.CTkFrame):
-    STATUS_COLORS  = {"ready": TEXT2, "decrypting": WARNING, "done": SUCCESS, "error": ERROR}
+    STATUS_COLORS  = {"ready": TEXT3, "decrypting": WARNING, "done": SUCCESS, "error": ERROR}
     STATUS_LABELS  = {"ready": "READY", "decrypting": "DECRYPTING…", "done": "DONE  ✓", "error": "ERROR"}
 
     def __init__(self, master, file_path: Path, on_remove, **kwargs):
-        super().__init__(master, fg_color=SURFACE2, corner_radius=8, **kwargs)
+        super().__init__(master, fg_color=SURFACE2, corner_radius=6,
+                         border_width=1, border_color=BORDER2, **kwargs)
         self.file_path = file_path
         self._status   = "ready"
 
@@ -47,30 +52,30 @@ class FileRow(ctk.CTkFrame):
 
         ctk.CTkLabel(self, text=f".{ext}",
             font=ctk.CTkFont(family="Consolas", size=10, weight="bold"),
-            text_color=badge_fg, fg_color=SURFACE, corner_radius=4,
+            text_color=badge_fg, fg_color=SURFACE, corner_radius=3,
             width=44, height=22,
         ).grid(row=0, column=0, padx=(10,8), pady=11)
 
         name = file_path.name
         if len(name) > 52: name = name[:24] + "…" + name[-20:]
         ctk.CTkLabel(self, text=name,
-            font=ctk.CTkFont(size=12), text_color=TEXT, anchor="w",
+            font=ctk.CTkFont(family="Consolas", size=11), text_color=TEXT, anchor="w",
         ).grid(row=0, column=1, sticky="w", pady=11)
 
         ctk.CTkLabel(self, text=size_str,
             font=ctk.CTkFont(family="Consolas", size=10),
-            text_color=TEXT2, width=64,
+            text_color=TEXT3, width=64,
         ).grid(row=0, column=2, padx=8, pady=11)
 
         self._status_lbl = ctk.CTkLabel(self, text="READY",
             font=ctk.CTkFont(family="Consolas", size=10, weight="bold"),
-            text_color=TEXT2, width=100,
+            text_color=TEXT3, width=100,
         )
         self._status_lbl.grid(row=0, column=3, padx=8, pady=11)
 
         self._rm = ctk.CTkButton(self, text="✕", width=28, height=24,
-            fg_color="transparent", hover_color=SURFACE,
-            text_color=TEXT2, font=ctk.CTkFont(size=13),
+            fg_color="transparent", hover_color=BORDER2,
+            text_color=TEXT3, font=ctk.CTkFont(family="Consolas", size=13),
             command=lambda: on_remove(self),
         )
         self._rm.grid(row=0, column=4, padx=(0,8), pady=11)
@@ -117,52 +122,71 @@ class App(ctk.CTk):
         hdr.grid(row=0, column=0, sticky="ew", padx=28, pady=(24,0))
         hdr.grid_columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(hdr, text="MSB LSA Decryptor",
-            font=ctk.CTkFont(size=22, weight="bold"), text_color=TEXT,
-        ).grid(row=0, column=0, sticky="w")
+        # Title with ">" prefix like website logo
+        title_frame = ctk.CTkFrame(hdr, fg_color="transparent")
+        title_frame.grid(row=0, column=0, columnspan=2, sticky="w")
 
-        ctk.CTkLabel(hdr, text="v1.0",
-            font=ctk.CTkFont(family="Consolas", size=11), text_color=TEXT2,
-        ).grid(row=0, column=1, sticky="w", padx=(8,0), pady=(6,0))
+        ctk.CTkLabel(title_frame, text=">",
+            font=ctk.CTkFont(family="Consolas", size=22, weight="bold"),
+            text_color=PURPLE,
+        ).grid(row=0, column=0, sticky="w", padx=(0, 6))
+
+        ctk.CTkLabel(title_frame, text="MSB LSA DECRYPTOR",
+            font=ctk.CTkFont(family="Consolas", size=18, weight="bold"),
+            text_color=ACCENT,
+        ).grid(row=0, column=1, sticky="w")
+
+        ctk.CTkLabel(title_frame, text="v1.0",
+            font=ctk.CTkFont(family="Consolas", size=10),
+            text_color=TEXT3,
+        ).grid(row=0, column=2, sticky="sw", padx=(8,0), pady=(0,2))
 
         ctk.CTkLabel(hdr,
             text="Recover encrypted Xiaomi Secret Album photos & videos",
-            font=ctk.CTkFont(size=12), text_color=TEXT2,
-        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(2,0))
+            font=ctk.CTkFont(family="Consolas", size=11), text_color=TEXT2,
+        ).grid(row=1, column=0, columnspan=3, sticky="w", pady=(4,0))
 
-        ctk.CTkFrame(self, height=1, fg_color=BORDER).grid(
-            row=1, column=0, sticky="ew", padx=28, pady=(16,0))
+        # Divider with accent gradient simulation (left accent line)
+        div_frame = ctk.CTkFrame(self, fg_color="transparent", height=1)
+        div_frame.grid(row=1, column=0, sticky="ew", padx=28, pady=(16,0))
+        div_frame.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkFrame(div_frame, height=1, width=100, fg_color=ACCENT,
+                     corner_radius=0).grid(row=0, column=0)
+        ctk.CTkFrame(div_frame, height=1, fg_color=BORDER2,
+                     corner_radius=0).grid(row=0, column=1, sticky="ew")
 
         # ── Drop zone ───────────────────────────────────────────────────────
-        dz = ctk.CTkFrame(self, fg_color=SURFACE, corner_radius=12,
-            border_width=1, border_color=BORDER)
+        dz = ctk.CTkFrame(self, fg_color=SURFACE, corner_radius=8,
+            border_width=1, border_color=BORDER2)
         dz.grid(row=2, column=0, sticky="ew", padx=28, pady=(16,0))
         dz.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(dz, text="⬇",
-            font=ctk.CTkFont(size=28), text_color=ACCENT,
+            font=ctk.CTkFont(size=26), text_color=ACCENT,
         ).grid(row=0, column=0, pady=(28,4))
 
-        ctk.CTkLabel(dz, text="Drop .lsa or .lsav files here",
-            font=ctk.CTkFont(size=14, weight="bold"), text_color=TEXT,
+        ctk.CTkLabel(dz, text="DROP .LSA OR .LSAV FILES HERE",
+            font=ctk.CTkFont(family="Consolas", size=13, weight="bold"),
+            text_color=TEXT,
         ).grid(row=1, column=0)
 
-        ctk.CTkLabel(dz, text="Photos (.lsa) and videos (.lsav) both supported",
-            font=ctk.CTkFont(size=11), text_color=TEXT2,
-        ).grid(row=2, column=0, pady=(2,12))
+        ctk.CTkLabel(dz, text="// photos (.lsa) and videos (.lsav) both supported",
+            font=ctk.CTkFont(family="Consolas", size=10), text_color=TEXT2,
+        ).grid(row=2, column=0, pady=(3,14))
 
         brow = ctk.CTkFrame(dz, fg_color="transparent")
         brow.grid(row=3, column=0, pady=(0,24))
 
         for i, (label, cmd) in enumerate([
-            ("Browse files", self._browse_files),
-            ("📁  Add folder", self._browse_folder),
+            ("[ Browse files ]", self._browse_files),
+            ("[ Add folder ]",   self._browse_folder),
         ]):
             ctk.CTkButton(brow, text=label,
-                font=ctk.CTkFont(size=12, weight="bold"),
-                fg_color=SURFACE2, hover_color=BORDER,
-                text_color=TEXT, border_width=1, border_color=BORDER,
-                width=130, height=34, corner_radius=8,
+                font=ctk.CTkFont(family="Consolas", size=11),
+                fg_color=SURFACE2, hover_color=BORDER2,
+                text_color=ACCENT, border_width=1, border_color=BORDER3,
+                width=140, height=32, corner_radius=4,
                 command=cmd,
             ).grid(row=0, column=i, padx=(0 if i else 0, 8 if i==0 else 0))
 
@@ -172,20 +196,20 @@ class App(ctk.CTk):
         lc.grid_columnconfigure(0, weight=1)
         lc.grid_rowconfigure(1, weight=1)
 
-        self._count_lbl = ctk.CTkLabel(lc, text="No files loaded",
-            font=ctk.CTkFont(family="Consolas", size=11),
-            text_color=TEXT2, anchor="w",
+        self._count_lbl = ctk.CTkLabel(lc, text="// No files loaded",
+            font=ctk.CTkFont(family="Consolas", size=10),
+            text_color=TEXT3, anchor="w",
         )
         self._count_lbl.grid(row=0, column=0, sticky="w", pady=(0,6))
 
         self._scroll = ctk.CTkScrollableFrame(lc, fg_color=SURFACE,
-            corner_radius=10, border_width=1, border_color=BORDER)
+            corner_radius=6, border_width=1, border_color=BORDER2)
         self._scroll.grid(row=1, column=0, sticky="nsew")
         self._scroll.grid_columnconfigure(0, weight=1)
 
         self._empty_lbl = ctk.CTkLabel(self._scroll,
             text="Files you add will appear here",
-            font=ctk.CTkFont(size=12), text_color=TEXT2)
+            font=ctk.CTkFont(family="Consolas", size=11), text_color=TEXT3)
         self._empty_lbl.grid(row=0, column=0, pady=32)
 
         # ── Bottom bar ───────────────────────────────────────────────────────
@@ -198,21 +222,21 @@ class App(ctk.CTk):
         out_row.grid_columnconfigure(1, weight=1)
 
         ctk.CTkLabel(out_row, text="Output:",
-            font=ctk.CTkFont(size=12), text_color=TEXT2, width=52,
+            font=ctk.CTkFont(family="Consolas", size=11), text_color=TEXT2, width=52,
         ).grid(row=0, column=0, sticky="w")
 
         self._out_var = ctk.StringVar(value=str(Path.home() / "Desktop" / "lsa_decrypted"))
         ctk.CTkEntry(out_row, textvariable=self._out_var,
             font=ctk.CTkFont(family="Consolas", size=11),
-            fg_color=SURFACE2, border_color=BORDER,
-            text_color=TEXT, height=32,
+            fg_color=SURFACE2, border_color=BORDER2,
+            text_color=TEXT, height=32, corner_radius=4,
         ).grid(row=0, column=1, sticky="ew", padx=(6,6))
 
         ctk.CTkButton(out_row, text="Browse",
-            font=ctk.CTkFont(size=11),
-            fg_color=SURFACE2, hover_color=BORDER,
-            text_color=TEXT2, border_width=1, border_color=BORDER,
-            width=70, height=32, corner_radius=6,
+            font=ctk.CTkFont(family="Consolas", size=10),
+            fg_color=SURFACE2, hover_color=BORDER2,
+            text_color=TEXT2, border_width=1, border_color=BORDER2,
+            width=70, height=32, corner_radius=4,
             command=self._browse_output,
         ).grid(row=0, column=2)
 
@@ -220,48 +244,56 @@ class App(ctk.CTk):
         act.grid(row=1, column=0, sticky="ew")
         act.grid_columnconfigure(0, weight=1)
 
-        self._decrypt_btn = ctk.CTkButton(act, text="Decrypt Files",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color=ACCENT, hover_color=ACCENT_DARK, text_color="#000000",
-            height=44, corner_radius=10, state="disabled",
+        self._decrypt_btn = ctk.CTkButton(act, text="▶  DECRYPT FILES",
+            font=ctk.CTkFont(family="Consolas", size=13, weight="bold"),
+            fg_color=BORDER3, hover_color=BORDER2,
+            text_color=ACCENT, border_width=1, border_color=ACCENT_DARK,
+            height=44, corner_radius=6, state="disabled",
             command=self._start_decryption,
         )
         self._decrypt_btn.grid(row=0, column=0, sticky="ew", padx=(0,10))
 
-        ctk.CTkButton(act, text="Clear",
-            font=ctk.CTkFont(size=13),
-            fg_color=SURFACE2, hover_color=BORDER,
-            text_color=TEXT2, border_width=1, border_color=BORDER,
-            width=80, height=44, corner_radius=10,
+        ctk.CTkButton(act, text="[ Clear ]",
+            font=ctk.CTkFont(family="Consolas", size=11),
+            fg_color=SURFACE2, hover_color=BORDER2,
+            text_color=TEXT2, border_width=1, border_color=BORDER2,
+            width=90, height=44, corner_radius=6,
             command=self._clear_all,
         ).grid(row=0, column=1)
 
-        self._progress = ctk.CTkProgressBar(bot, height=3,
+        self._progress = ctk.CTkProgressBar(bot, height=2,
             fg_color=BORDER, progress_color=ACCENT, corner_radius=99)
         self._progress.grid(row=2, column=0, sticky="ew", pady=(10,4))
         self._progress.set(0)
         self._progress.grid_remove()
 
         self._status_lbl = ctk.CTkLabel(bot, text="",
-            font=ctk.CTkFont(family="Consolas", size=11),
+            font=ctk.CTkFont(family="Consolas", size=10),
             text_color=TEXT2, anchor="w")
         self._status_lbl.grid(row=3, column=0, sticky="w")
         self._status_lbl.grid_remove()
 
         # Footer
-        ctk.CTkFrame(self, height=1, fg_color=BORDER).grid(
-            row=5, column=0, sticky="ew", padx=28, pady=(12,0))
+        div_frame2 = ctk.CTkFrame(self, fg_color="transparent", height=1)
+        div_frame2.grid(row=5, column=0, sticky="ew", padx=28, pady=(12,0))
+        div_frame2.grid_columnconfigure(1, weight=1)
+
+        ctk.CTkFrame(div_frame2, height=1, width=60, fg_color=ACCENT_DARK,
+                     corner_radius=0).grid(row=0, column=0)
+        ctk.CTkFrame(div_frame2, height=1, fg_color=BORDER,
+                     corner_radius=0).grid(row=0, column=1, sticky="ew")
+
         ftr = ctk.CTkFrame(self, fg_color="transparent")
         ftr.grid(row=6, column=0, sticky="ew", padx=28, pady=(8,16))
         ftr.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(ftr,
-            text="Made in Sri Lanka",
-            font=ctk.CTkFont(size=11), text_color=TEXT2,
+            text="MADE IN SRI LANKA",
+            font=ctk.CTkFont(family="Consolas", size=10), text_color=TEXT3,
         ).grid(row=0, column=0, sticky="w")
 
         ctk.CTkLabel(ftr, text="Powered By Manoj Senevirathna",
-            font=ctk.CTkFont(size=10), text_color=BORDER,
+            font=ctk.CTkFont(family="Consolas", size=9), text_color=BORDER2,
         ).grid(row=0, column=1, sticky="e")
 
     # ── File management ──────────────────────────────────────────────────────
@@ -302,12 +334,12 @@ class App(ctk.CTk):
         n = len(self._rows)
         if n == 0:
             self._empty_lbl.grid()
-            self._count_lbl.configure(text="No files loaded", text_color=TEXT2)
+            self._count_lbl.configure(text="// No files loaded", text_color=TEXT3)
             self._decrypt_btn.configure(state="disabled")
         else:
             self._empty_lbl.grid_remove()
             self._count_lbl.configure(
-                text=f"{n} file{'s' if n!=1 else ''} ready", text_color=ACCENT)
+                text=f"// {n} file{'s' if n!=1 else ''} ready", text_color=ACCENT)
             has_pending = any(r.status == "ready" for r in self._rows)
             self._decrypt_btn.configure(state="normal" if has_pending else "disabled")
 
@@ -332,7 +364,7 @@ class App(ctk.CTk):
         if not pending: return
         out_dir = Path(self._out_var.get())
         out_dir.mkdir(parents=True, exist_ok=True)
-        self._decrypt_btn.configure(state="disabled", text="Decrypting…")
+        self._decrypt_btn.configure(state="disabled", text="▶  DECRYPTING…")
         self._progress.set(0)
         self._progress.grid()
         self._status_lbl.grid()
@@ -345,7 +377,7 @@ class App(ctk.CTk):
             self.after(0, lambda r=row: r.set_status("decrypting"))
             self.after(0, lambda n=i, f=row.file_path: (
                 self._progress.set(n/total),
-                self._status_lbl.configure(text=f"Processing: {f.name}")))
+                self._status_lbl.configure(text=f"> Processing: {f.name}")))
             try:
                 decrypt_file(row.file_path, out_dir)
                 ok += 1
@@ -358,10 +390,10 @@ class App(ctk.CTk):
 
     def _done(self, ok, fail, out_dir):
         self._progress.set(1)
-        msg = f"Done — {ok} decrypted" + (f", {fail} failed" if fail else "")
+        msg = f"> Done — {ok} decrypted" + (f", {fail} failed" if fail else "")
         self._status_lbl.configure(
             text=msg, text_color=SUCCESS if not fail else WARNING)
-        self._decrypt_btn.configure(state="normal", text="Decrypt Files")
+        self._decrypt_btn.configure(state="normal", text="▶  DECRYPT FILES")
         self._refresh()
         if ok > 0:
             try:
